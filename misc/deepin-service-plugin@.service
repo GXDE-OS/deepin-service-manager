@@ -1,0 +1,9 @@
+[Unit]
+Description=deepin-service-manager
+After=dbus.service
+
+[Service]
+ExecStart=/usr/bin/deepin-service-manager -n %i
+
+[Install]
+WantedBy=multi-user.target
