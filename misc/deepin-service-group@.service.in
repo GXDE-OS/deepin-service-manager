@@ -2,34 +2,18 @@
 Description=deepin-service-manager
 After=dbus.service deepin-service-manager.service
 PartOf=deepin-service-manager.service
+StartLimitBurst=5
+StartLimitIntervalSec=60
 
 [Service]
 ExecStart=/usr/bin/deepin-service-manager -g %i
-Restart=always
+Restart=on-failure
 RestartSec=3
 @SYSTEMD_SLICE@
-
-ReadOnlyPaths=/usr/share/deepin-service-manager/
-ReadOnlyPaths=/usr/lib/deepin-service-manager/
-
-DevicePolicy=closed
-
-ProtectSystem=full
-ProtectHome=yes
-PrivateTmp=yes
-PrivateDevices=yes
-PrivateNetwork=yes
-ProtectHostname=yes
-ProtectClock=yes
-ProtectKernelTunables=yes
-ProtectKernelModules=yes
-ProtectKernelLogs=yes
-ProtectControlGroups=yes
-RestrictAddressFamilies=AF_UNIX
-RestrictNamespaces=yes
-LockPersonality=yes
-RestrictRealtime=yes
-RestrictSUIDSGID=yes
-RemoveIPC=yes
+# 如果 group 是 deepin-daemon，使用 deepin-daemon 用户启动
+# 可以通过 systemd drop-in 配置覆盖: /etc/systemd/system/deepin-service-group@deepin-daemon.service.d/override.conf
+# 内容: [Service]
+#       User=deepin-daemon
+#       Group=deepin-daemon
 
 @SYSTEMD_INSTALL@

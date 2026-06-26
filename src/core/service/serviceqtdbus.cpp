@@ -14,6 +14,7 @@
 #include <QLoggingCategory>
 #include <QMetaClassInfo>
 #include <QThread>
+#include <QMutexLocker>
 
 Q_LOGGING_CATEGORY(dsm_service_qt, "[QDBusService]")
 
@@ -65,6 +66,7 @@ bool ServiceQtDBus::registerService()
 {
     qCInfo(dsm_service_qt) << "service register: " << policy->name;
 
+    QMutexLocker locker(&m_registerMutex);
     if (libFuncCall("DSMRegister", true)) {
         ServiceBase::registerService();
         return true;
@@ -76,6 +78,11 @@ bool ServiceQtDBus::registerService()
 bool ServiceQtDBus::unregisterService()
 {
     qCInfo(dsm_service_qt) << "service unregister: " << policy->name;
+    QMutexLocker locker(&m_registerMutex);
+    if (policy->dbus) {
+        delete policy->dbus;
+        policy->dbus = nullptr;
+    }
 
     if (libFuncCall("DSMUnRegister", false)) {
         ServiceBase::unregisterService();
@@ -103,8 +110,8 @@ bool ServiceQtDBus::libFuncCall(const QString &funcName, bool isRegister)
         m_library->deleteLater();
         return false;
     }
-    auto connection = qDbusConnection();
-    int ret = objFunc(policy->name.toStdString().c_str(), (void *)&connection);
+    policy->dbus = new QDBusConnection( qDbusConnection());
+    int ret = objFunc(policy->name.toStdString().c_str(), (void *)policy->dbus);
     if (ret) {
         return false;
     }

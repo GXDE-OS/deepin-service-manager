@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2023 UnionTech Software Technology Co., Ltd.
+// SPDX-FileCopyrightText: 2023 - 2026 UnionTech Software Technology Co., Ltd.
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
@@ -70,8 +70,22 @@ void PluginLoader::loadByGroup(const QString &group)
             continue;
         }
         if (m_isResident != policy->isResident()) {
+            policy->deleteLater();
             continue;
         }
+
+        if (!policy->matchesEnvironment()) {
+            qCInfo(dsm_PluginLoader) << "plugin condition not matched, skip:" << policy->name;
+            policy->deleteLater();
+            continue;
+        }
+
+        if (policy->sdkType == SDKType::QT && !checkPluginQtVersion(policy->pluginPath)) {
+            qCWarning(dsm_PluginLoader) << "plugin Qt version not match: " << USE_QT_VERSION_MAJOR;
+            policy->deleteLater();
+            continue;
+        }
+
         policys.append(policy);
     }
     // sort policy
@@ -111,9 +125,22 @@ void PluginLoader::loadByName(const QString &name)
             continue;
         }
 
+        if (!policy->matchesEnvironment()) {
+            qCInfo(dsm_PluginLoader) << "plugin condition not matched, skip:" << policy->name;
+            policy->deleteLater();
+            continue;
+        }
+
+        if (policy->sdkType == SDKType::QT && !checkPluginQtVersion(policy->pluginPath)) {
+            qCWarning(dsm_PluginLoader) << "plugin Qt version not match: " << USE_QT_VERSION_MAJOR;
+            policy->deleteLater();
+            continue;
+        }
+
         ServiceBase *srv = createService(policy);
         if (srv == nullptr) {
             qCWarning(dsm_PluginLoader) << "create service failed!";
+            policy->deleteLater();
             return;
         }
         if (!policy->pluginPath.isEmpty()) {
@@ -136,6 +163,15 @@ QString PluginLoader::getGroup(const QString &name)
         Policy *policy = new Policy(this);
         policy->parseConfig(file.absoluteFilePath());
         if (policy->name == name) {
+            // Condition unmet → behave as if name not found, so PluginManager::loadByName
+            // short-circuits at the group.isEmpty() branch and skips RegisterGroup,
+            // avoiding an orphan GroupManager on the main process.
+            if (!policy->matchesEnvironment()) {
+                qCInfo(dsm_PluginLoader) << "condition not matched for" << name
+                                         << "treat as not found";
+                policy->deleteLater();
+                return QString();
+            }
             const QString &group = policy->group;
             policy->deleteLater();
             return group;
@@ -195,4 +231,14 @@ QList<Policy *> PluginLoader::sortPolicy(QList<Policy *> policys)
 QStringList PluginLoader::plugins() const
 {
     return m_pluginMap.keys();
+}
+
+bool PluginLoader::checkPluginQtVersion(const QString &pluginPath)
+{
+    QFileInfo pluginFileInfo(QString(SERVICE_LIB_DIR) + pluginPath);
+    if (!checkLibraryQtVersion(pluginFileInfo.absoluteFilePath())) {
+        return false;
+    }
+
+    return true;
 }

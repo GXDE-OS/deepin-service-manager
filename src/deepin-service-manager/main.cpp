@@ -4,30 +4,63 @@
 
 #include "pluginmanager.h"
 #include "servicemanager.h"
+#include "utils.h"
 
 #include <QCommandLineOption>
 #include <QCommandLineParser>
-#include <QCoreApplication>
+#include <QGuiApplication>
 #include <QDebug>
 #include <QLoggingCategory>
+#include <QProcess>
+#include <DLog>
 
 #include <unistd.h>
+#include <pwd.h>
 Q_LOGGING_CATEGORY(dsm_Main, "[Main]")
 
 int main(int argc, char *argv[])
 {
-    QCoreApplication a(argc, argv);
-    a.setApplicationVersion(VERSION);
+    // 声明一个指向 QCoreApplication 或 QGuiApplication 的指针
+    QCoreApplication *a;
+    uid_t euid = geteuid();
+    bool useCoreApp = (euid == 0);
+    
+    // 检查是否是deepin-daemon 用户
+    if (!useCoreApp) {
+        struct passwd *pw = getpwuid(euid);
+        useCoreApp = (pw && QString::fromUtf8(pw->pw_name) == "deepin-daemon");
+    }
+    
+    if (useCoreApp) {
+        a = new QCoreApplication(argc, argv);
+    } else {
+        a = new QGuiApplication(argc, argv);
+    }
+    a->setApplicationName("org.deepin.service.manager");
+
+    Dtk::Core::DLogManager::registerConsoleAppender();
+    Dtk::Core::DLogManager::registerJournalAppender();
+    a->setApplicationVersion(VERSION);
 
     QCommandLineOption groupOption({ { "g", "group" }, "eg:core", "group name" });
     QCommandLineOption nameOption({ { "n", "name" }, "eg:org.deepin.demo", "service name" });
+    QCommandLineOption elfQtVerCheckOption("elf-qt-version-check", "service manager plugin so <path>", "path");
     QCommandLineParser parser;
     parser.setApplicationDescription("deepin service plugin loader");
     parser.addHelpOption();
     parser.addVersionOption();
     parser.addOption(groupOption);
     parser.addOption(nameOption);
-    parser.process(a);
+    parser.addOption(elfQtVerCheckOption);
+    parser.addHelpOption();
+    parser.process(*a);
+
+    if (parser.isSet(elfQtVerCheckOption)) {
+        QString filePath(parser.value(elfQtVerCheckOption));
+        qCDebug(dsm_Main) << "Checking Qt version from ELF header of" << filePath;
+        qCDebug(dsm_Main) << qtVersionFromSo(filePath);
+        return 0;
+    }
 
     const bool isSetGroup = parser.isSet(groupOption);
     const bool isSetName = parser.isSet(nameOption);
@@ -45,14 +78,18 @@ int main(int argc, char *argv[])
         PluginManager *srv = new PluginManager();
         srv->init(busTypeMap[typeValue]);
         srv->loadByName(nameValue);
+        QString newName = QString("service-manager: %1").arg(nameValue);
+        setProcessName(argc, argv, newName.toStdString().c_str());
     } else if (isSetGroup) {
         PluginManager *srv = new PluginManager();
         srv->init(busTypeMap[typeValue]);
         srv->loadByGroup(groupValue);
+        QString newName = QString("service-manager: %1").arg(groupValue);
+        setProcessName(argc, argv, newName.toStdString().c_str());
     } else {
         ServiceManager *srv = new ServiceManager();
         srv->init(busTypeMap[typeValue]);
     }
 
-    return a.exec();
+    return a->exec();
 }

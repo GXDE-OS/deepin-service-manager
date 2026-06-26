@@ -6,7 +6,10 @@ set(BIN_NAME "deepin-service-manager")
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
-find_package(Qt5 COMPONENTS Core DBus REQUIRED)
+find_package(Qt${QT_VERSION_MAJOR} ${REQUIRED_QT_VERSION} REQUIRED COMPONENTS Gui Core DBus)
+find_package(Dtk6 COMPONENTS Core)
+
+check_include_file("elf.h" HAVE_ELF_H)
 
 # Sources files
 file(GLOB_RECURSE SRCS
@@ -22,20 +25,29 @@ target_compile_definitions(${BIN_NAME} PRIVATE
   VERSION="${VERSION}"
 )
 
+if (HAVE_ELF_H AND NOT DISABLE_ELF_QT_CHECK)
+  target_compile_definitions(${BIN_NAME} PRIVATE
+    ELF_QT_VER_CHECK=1
+  )
+endif()
+
 target_link_directories(${BIN_NAME} PRIVATE
   ${CMAKE_BINARY_DIR}/core/
 )
 
 target_include_directories(${BIN_NAME} PUBLIC
-  Qt5::Core
-  Qt5::DBus
+  Qt${QT_VERSION_MAJOR}::Gui
+  Qt${QT_VERSION_MAJOR}::Core
+  Qt${QT_VERSION_MAJOR}::DBus
   ${SRC_BASE_DIR}/core
   ${SRC_BASE_DIR}/libqdbusservice
 )
 
 target_link_libraries(${BIN_NAME} PRIVATE
-  Qt5::Core
-  Qt5::DBus
+  Qt${QT_VERSION_MAJOR}::Gui
+  Qt${QT_VERSION_MAJOR}::Core
+  Qt${QT_VERSION_MAJOR}::DBus
+  Dtk6::Core
   core-service
 )
 

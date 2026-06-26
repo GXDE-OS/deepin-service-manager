@@ -6,6 +6,7 @@
 #define MANAGER_UTILS_H
 
 #include <QDBusConnection>
+#include <QVersionNumber>
 
 #define ServiceManagerInterface "org.deepin.ServiceManager1"
 #define PluginManagerInterface "org.deepin.ServiceManager1.Plugin"
@@ -22,4 +23,11 @@ static const QString &PluginManagerPath = QStringLiteral("/org/deepin/ServiceMan
 static const QMap<QDBusConnection::BusType, QString> typeMap{
     { QDBusConnection::SystemBus, "system" }, { QDBusConnection::SessionBus, "user" }
 };
+
+static const char USE_QT_VERSION_MAJOR = '6';
+
+void setProcessName(int argc, char **argv, const char *title);
+bool checkLibraryQtVersion(const QString &soPath);
+QVersionNumber qtVersionFromSo(const QString &path);
+
 #endif // MANAGER_UTILS_H

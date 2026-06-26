@@ -18,8 +18,8 @@ install(FILES org.deepin.ServiceManager1.conf
 
 set(SYSTEMD_SLICE "")
 set(SYSTEMD_INSTALL "")
-configure_file(deepin-service-group@.service.in deepin-service-group@.service.system @ONLY)
 configure_file(deepin-service-manager.service.in deepin-service-manager.service.system @ONLY)
+configure_file(deepin-service-group@.service.in deepin-service-group@.service.system @ONLY)
 set(SYSTEMD_INSTALL "[Install]\nWantedBy=multi-user.target")
 configure_file(deepin-service-plugin@.service.in deepin-service-plugin@.service.system @ONLY)
 
@@ -33,6 +33,13 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/deepin-service-group@.service.system
     RENAME deepin-service-group@.service
 )
 
+# Install drop-in configuration for deepin-daemon group
+configure_file(deepin-service-group@deepin-daemon.service.d/override.conf.in 
+    deepin-service-group@deepin-daemon.service.d/override.conf @ONLY)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/deepin-service-group@deepin-daemon.service.d/override.conf
+    DESTINATION lib/systemd/system/deepin-service-group@deepin-daemon.service.d/
+)
+
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/deepin-service-plugin@.service.system
     DESTINATION lib/systemd/system/
     RENAME deepin-service-plugin@.service
@@ -41,6 +48,10 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/deepin-service-plugin@.service.system
 set(SYSTEMD_SLICE "Slice=session.slice")
 set(SYSTEMD_INSTALL "")
 configure_file(deepin-service-group@.service.in deepin-service-group@.service.user @ONLY)
+set(EXTRA_AFTER "dde-session-core.target")
+set(REQUISITE "Requisite=dde-session-core.target")
+set(PARTOF "PartOf=dde-session-initialized.target")
+set(BEFORE "Before=dde-session-initialized.target")
 configure_file(deepin-service-manager.service.in deepin-service-manager.service.user @ONLY)
 set(SYSTEMD_INSTALL "[Install]\nWantedBy=default.target")
 configure_file(deepin-service-plugin@.service.in deepin-service-plugin@.service.user @ONLY)
@@ -61,7 +72,7 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/deepin-service-plugin@.service.user
 )
 
 install_symlink(deepin-service-manager.service multi-user.target.wants)
-install_user_symlink(deepin-service-manager.service default.target.wants)
+install_user_symlink(deepin-service-manager.service dde-session-initialized.target.wants)
 
 set(LIB_NAME "deepin-qdbus-service")
 
@@ -71,3 +82,6 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${LIB_NAME}.pc DESTINATION ${CMAKE_INS
 # config cmake file
 configure_file(${LIB_NAME}Config.cmake.in ${LIB_NAME}Config.cmake @ONLY)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${LIB_NAME}Config.cmake DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${LIB_NAME})
+# debug config file
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/deepin-debug-config/org.deepin.service.manager.json DESTINATION ${CMAKE_INSTALL_DATADIR}/deepin-debug-config/deepin-debug-config.d)
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/deepin-log-config/org.deepin.service.manager.json DESTINATION ${CMAKE_INSTALL_DATADIR}/deepin-log-viewer/deepin-log.conf.d)
