@@ -20,7 +20,7 @@ Copyright: UnionTech Software Technology Co., Ltd.
 License: CC-BY-4.0
 
 # debian
-Files: debian/*
+Files: debian/* arch/*
 Copyright: None
 License: CC0-1.0
 

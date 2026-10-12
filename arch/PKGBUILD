@@ -1,0 +1,36 @@
+# Maintainer: CharOfString <root@charofstring.cc>
+pkgname=deepin-service-manager-git
+pkgver=1.0.22
+pkgrel=1
+pkgdesc='D-Bus service manager and service framework (GXDE fork)'
+arch=('x86_64' 'aarch64')
+url="https://github.com/GXDE-OS/deepin-service-manager"
+license=('LGPL-3.0-or-later')
+depends=('dtk6core-git' 'qt6-base' 'systemd-libs' 'libgcc' 'libstdc++' 'glibc')
+makedepends=('git' 'cmake' 'ninja' 'qt6-tools')
+provides=('deepin-service-manager' 'libdeepin-service-framework')
+conflicts=('deepin-service-manager')
+source=()
+sha512sums=()
+
+# 直接使用 PKGBUILD 所在的 git 仓库作为源码 ・ Build from the git checkout this PKGBUILD lives in.
+_srcroot() {
+  git -C "$startdir" rev-parse --show-toplevel
+}
+
+build() {
+  # 与 debian/rules 相同：-Wl,-E 导出符号供插件使用 ・ Same as debian/rules: -Wl,-E exports symbols for the plugins.
+  export LDFLAGS="$LDFLAGS -Wl,-E"
+  cmake -B build -S "$(_srcroot)" -GNinja \
+    -DCMAKE_BUILD_TYPE=None \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_INSTALL_LIBDIR=lib \
+    -DCMAKE_INSTALL_SYSCONFDIR=/etc \
+    -DCMAKE_SKIP_BUILD_RPATH=ON \
+    -DVERSION="$pkgver"
+  ninja -C build
+}
+
+package() {
+  DESTDIR="$pkgdir" ninja -C build install
+}
