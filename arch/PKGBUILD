@@ -1,15 +1,17 @@
 # Maintainer: CharOfString <root@charofstring.cc>
-pkgname=deepin-service-manager-git
+pkgname=gxde-deepin-service-manager
 pkgver=1.0.22
 pkgrel=1
 pkgdesc='D-Bus service manager and service framework (GXDE fork)'
 arch=('x86_64' 'aarch64')
 url="https://github.com/GXDE-OS/deepin-service-manager"
 license=('LGPL-3.0-or-later')
-depends=('dtk6core-git' 'qt6-base' 'systemd-libs' 'libgcc' 'libstdc++' 'glibc')
+depends=('gxde-dtk6core' 'qt6-base' 'systemd-libs' 'libgcc' 'libstdc++' 'glibc')
 makedepends=('git' 'cmake' 'ninja' 'qt6-tools')
-provides=('deepin-service-manager' 'libdeepin-service-framework')
-conflicts=('deepin-service-manager')
+provides=('deepin-service-manager' 'libdeepin-service-framework'
+          "deepin-service-manager-git=$pkgver")
+conflicts=('deepin-service-manager' 'deepin-service-manager-git')
+replaces=('deepin-service-manager-git')
 source=()
 sha512sums=()
 
